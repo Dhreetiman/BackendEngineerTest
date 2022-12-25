@@ -1,4 +1,5 @@
 const customerModel = require('../model/customerModel');
+const cardModel = require('../model/cardModel')
 const validator = require('../validator/validator');
 const {v1: uuidv1} = require('uuid');
 
@@ -37,7 +38,7 @@ const createCustomer = async (req, res) => {
         }
 
         if (!validator.isValidInput(address)) return res.status(400).send({status: false, message: "plaese enter address"})
-        if (!validator.isValidCity(address)) return res.status(400).send({status: false, message: "INVALID INPUT... plaese enter valid address"})
+        if (!validator.isValidCity(address)) return res.status(400).send({status: false, message: "INVALID INPUT... Enter only city name where you live."})
 
         data.customerID = 'FunctionUp-'+uuidv1()
         // console.log(data.customerID);
@@ -47,11 +48,9 @@ const createCustomer = async (req, res) => {
             if (!["ACTIVE", "INACTIVE"].includes(status)) return res.status(400).send({status: false, message: "choose input for status from the list: (ACTIVE, INACTIVE)"})
         }
 
-
         let customerData = await customerModel.create(data)
         return res.status(201).send({status: true, message: "Data created successfully", data: customerData})
     
-
 
     } catch (error) {
         return res.status(500).send({status: false, message: error.message})
@@ -92,5 +91,29 @@ const deleteCustomer = async (req, res) => {
 }
 
 
+//====================[function to fetch customer data by id]===================//
 
-module.exports = {createCustomer, getCustomer, deleteCustomer}
+const getDataById = async (req, res) => {
+    try {
+        
+        let id = req.params.customerID
+        if (!validator.isValidObjectId(id)) return res.status(400).send({status: false, message: `Given customerID: '${id}' is not valid`})
+        let customerData = await customerModel.findById({_id: id}).lean()
+        if (!customerData) return res.status(404).send({status: false, message: "Customer does not exist or already Deleted"})
+        if (customerData.status=="INACTIVE") return res.status(404).send({status: false, message: "Customer is inactive"})
+
+        let cardData = await cardModel.find({customerId:id})
+        customerData.cardsData = cardData
+
+
+        return res.status(200).send({status: true, message: "success", data: customerData})
+
+
+    } catch (error) {
+        return res.status(500).send({status: false, message: error.message})
+    }
+}
+
+
+
+module.exports = {createCustomer, getCustomer, deleteCustomer, getDataById}
